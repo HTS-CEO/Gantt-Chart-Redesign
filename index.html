@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Construction Progress Dashboard</title>
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --success-color: #4cc9f0;
+            --warning-color: #f8961e;
+            --danger-color: #f72585;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #f5f7ff;
+            color: var(--dark-color);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .dashboard {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px 20px;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: var(--border-radius);
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background-color: var(--light-color);
+            color: var(--dark-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: #e9ecef;
+        }
+
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .color-picker-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .color-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .color-picker {
+            width: 30px;
+            height: 30px;
+            border: 2px solid #e9ecef;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .chart-container {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .chart-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            padding: 20px;
+            touch-action: pan-y;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 500px;
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            padding: 15px 20px;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+        }
+
+        .legend-text {
+            font-size: 0.9rem;
+        }
+
+        .status-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 20px;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-title {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+
+        .card-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .card-change {
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .positive {
+            color: #2ecc71;
+        }
+
+        .negative {
+            color: #e74c3c;
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+
+            .controls {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+
+            .btn {
+                flex-grow: 1;
+            }
+
+            .status-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <div class="logo">Construction Progress</div>
+            <div class="controls">
+                <button class="btn btn-icon" id="zoomIn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        <line x1="11" y1="8" x2="11" y2="14"></line>
+                        <line x1="8" y1="11" x2="14" y2="11"></line>
+                    </svg>
+                </button>
+                <button class="btn btn-icon" id="zoomOut">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        <line x1="8" y1="11" x2="14" y2="11"></line>
+                    </svg>
+                </button>
+                <button class="btn btn-secondary" id="resetView">Reset View</button>
+                <div class="color-picker-container">
+                    <span class="color-label">Color:</span>
+                    <input type="color" class="color-picker" id="activityColor" value="#4361ee">
+                </div>
+                <button class="btn" id="exportBtn">Export</button>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #4361ee;"></div>
+                <span class="legend-text">Excavation</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #4cc9f0;"></div>
+                <span class="legend-text">Stabilization</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #f8961e;"></div>
+                <span class="legend-text">Topo</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #f72585;"></div>
+                <span class="legend-text">Scarification</span>
+            </div>
+        </div>
+
+        <div class="status-cards">
+            <div class="card">
+                <div class="card-title">Completed Work</div>
+                <div class="card-value">78%</div>
+                <div class="card-change positive">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                        <polyline points="17 6 23 6 23 12"></polyline>
+                    </svg>
+                    +12% this week
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Remaining Work</div>
+                <div class="card-value">22%</div>
+                <div class="card-change negative">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+                        <polyline points="17 18 23 18 23 12"></polyline>
+                    </svg>
+                    -8% this week
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Current Section</div>
+                <div class="card-value">50+063.00</div>
+                <div class="card-change positive">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                        <polyline points="17 6 23 6 23 12"></polyline>
+                    </svg>
+                    +68m today
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Next Milestone</div>
+                <div class="card-value">51+350.00</div>
+                <div class="card-change">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    3 days remaining
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-wrapper">
+                <canvas id="progressChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('progressChart');
+            const ctx = canvas.getContext('2d');
+            const zoomInBtn = document.getElementById('zoomIn');
+            const zoomOutBtn = document.getElementById('zoomOut');
+            const resetViewBtn = document.getElementById('resetView');
+            const exportBtn = document.getElementById('exportBtn');
+            const colorPicker = document.getElementById('activityColor');
+            const tooltip = document.getElementById('tooltip');
+            
+            let scale = 1;
+            let offsetX = 0;
+            let isDragging = false;
+            let lastX = 0;
+            let animationFrameId = null;
+            let hoveredItem = null;
+            
+            const data = {
+                distances: [
+                    "49+515.00", "49+820.00", "49+840.00", "49+860.00", "49+880.00", 
+                    "49+900.00", "49+920.00", "49+940.00", "49+960.00", "49+980.00", 
+                    "49+990.00", "50+000.00", "50+020.00", "50+040.00", "50+060.00", 
+                    "50+063.00", "50+076.68", "50+660.00", "51+300.00", "51+320.00", 
+                    "51+340.00", "51+350.00", "51+360.00", "51+380.00"
+                ],
+                topActivities: [
+                    { 
+                        name: "Stabilizare - Cale Stanga", 
+                        color: "#4cc9f0",
+                        ranges: [
+                            { start: "50+020.00", end: "50+060.00", date: "25.3.2025", progress: 85 },
+                            { start: "50+660.00", end: "51+320.00", date: "26.3.2025", progress: 45 }
+                        ] 
+                    },
+                    { 
+                        name: "Excavatie pema Loess - Cale Stanga", 
+                        color: "#4361ee",
+                        ranges: [
+                            { start: "49+880.00", end: "50+020.00", date: "24.3.2025", progress: 100 },
+                            { start: "50+060.00", end: "50+660.00", date: "25.3.2025", progress: 72 }
+                        ] 
+                    },
+                    { 
+                        name: "Decoperta topo - Cale Stanga", 
+                        color: "#f8961e",
+                        ranges: [
+                            { start: "49+515.00", end: "49+990.00", date: "23.3.2025", progress: 100 },
+                            { start: "51+320.00", end: "51+380.00", date: "27.3.2025", progress: 15 }
+                        ]
+                    }
+                ],
+                bottomActivities: [
+                    { 
+                        name: "Decoperta topo - Cale Dreapta", 
+                        color: "#f8961e",
+                        ranges: [
+                            { start: "49+515.00", end: "49+990.00", date: "23.3.2025", progress: 100 },
+                            { start: "51+320.00", end: "51+380.00", date: "27.3.2025", progress: 15 }
+                        ]
+                    },
+                    { 
+                        name: "Excavatie pera Loess - Cale Dreapta", 
+                        color: "#4361ee",
+                        ranges: [
+                            { start: "49+880.00", end: "50+020.00", date: "24.3.2025", progress: 100 },
+                            { start: "50+060.00", end: "50+660.00", date: "25.3.2025", progress: 72 }
+                        ] 
+                    },
+                    { 
+                        name: "Scarificare + stabilizare - Cale Dreapta", 
+                        color: "#f72585",
+                        ranges: [
+                            { start: "50+020.00", end: "50+060.00", date: "25.3.2025", progress: 85 },
+                            { start: "50+660.00", end: "51+320.00", date: "26.3.2025", progress: 45 }
+                        ] 
+                    }
+                ]
+            };
+            
+            function initCanvas() {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+                canvas.style.width = `${rect.width}px`;
+                canvas.style.height = `${rect.height}px`;
+                drawChart();
+            }
+            
+            function drawChart() {
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+                
+                animationFrameId = requestAnimationFrame(() => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.save();
+                    
+                    const dpr = window.devicePixelRatio || 1;
+                    const rect = canvas.getBoundingClientRect();
+                    const effectiveWidth = rect.width;
+                    const effectiveHeight = rect.height;
+                    
+                    ctx.translate(offsetX * dpr, 0);
+                    ctx.scale(scale, 1);
+                    
+                    const margin = 40 * dpr;
+                    const centerY = effectiveHeight / 2 * dpr;
+                    const lineHeight = 30 * dpr;
+                    const activityHeight = 24 * dpr;
+                    const distanceWidth = 80 * dpr;
+                    
+                    drawCenterLine(centerY, effectiveWidth, margin, dpr);
+                    drawDistances(centerY, effectiveWidth, margin, dpr);
+                    drawActivities(data.topActivities, centerY - 70 * dpr, effectiveWidth, margin, dpr, true);
+                    drawActivities(data.bottomActivities, centerY + 70 * dpr, effectiveWidth, margin, dpr, false);
+                    
+                    ctx.restore();
+                    
+                    if (hoveredItem) {
+                        drawHoverEffect(hoveredItem, dpr);
+                    }
+                });
+            }
+            
+            function drawCenterLine(centerY, effectiveWidth, margin, dpr) {
+                ctx.strokeStyle = '#e9ecef';
+                ctx.lineWidth = 2 * dpr;
+                ctx.beginPath();
+                ctx.moveTo(0, centerY);
+                ctx.lineTo(effectiveWidth, centerY);
+                ctx.stroke();
+                
+                ctx.strokeStyle = '#dee2e6';
+                ctx.lineWidth = 1 * dpr;
+                ctx.setLineDash([5 * dpr, 3 * dpr]);
+                ctx.beginPath();
+                ctx.moveTo(margin, 0);
+                ctx.lineTo(margin, effectiveWidth);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            function drawDistances(centerY, effectiveWidth, margin, dpr) {
+                const minDistance = parseFloat(data.distances[0].replace('+', ''));
+                const maxDistance = parseFloat(data.distances[data.distances.length - 1].replace('+', ''));
+                const totalDistance = maxDistance - minDistance;
+                const pixelsPerUnit = (effectiveWidth - 2 * margin) / (totalDistance * scale);
+                
+                data.distances.forEach(dist => {
+                    const distValue = parseFloat(dist.replace('+', ''));
+                    const x = margin + (distValue - minDistance) * pixelsPerUnit;
+                    
+                    ctx.fillStyle = '#495057';
+                    ctx.font = `${12 * dpr}px 'Inter', sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(dist, x, centerY + 25 * dpr);
+                    
+                    ctx.strokeStyle = '#adb5bd';
+                    ctx.lineWidth = 1 * dpr;
+                    ctx.beginPath();
+                    ctx.moveTo(x, centerY - 8 * dpr);
+                    ctx.lineTo(x, centerY + 8 * dpr);
+                    ctx.stroke();
+                    
+                    if (dist === "50+063.00") {
+                        drawCurrentPositionMarker(x, centerY, dpr);
+                    }
+                });
+            }
+            
+            function drawCurrentPositionMarker(x, centerY, dpr) {
+                ctx.fillStyle = '#f72585';
+                ctx.beginPath();
+                ctx.arc(x, centerY, 6 * dpr, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2 * dpr;
+                ctx.beginPath();
+                ctx.arc(x, centerY, 8 * dpr, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            function drawActivities(activities, startY, effectiveWidth, margin, dpr, isTop) {
+                const minDistance = parseFloat(data.distances[0].replace('+', ''));
+                const maxDistance = parseFloat(data.distances[data.distances.length - 1].replace('+', ''));
+                const totalDistance = maxDistance - minDistance;
+                const pixelsPerUnit = (effectiveWidth - 2 * margin) / (totalDistance * scale);
+                
+                activities.forEach((activity, i) => {
+                    const activityY = isTop ? startY - i * (activityHeight + 15 * dpr) : startY + i * (activityHeight + 15 * dpr);
+                    
+                    ctx.fillStyle = '#212529';
+                    ctx.font = `${13 * dpr}px 'Inter', sans-serif`;
+                    ctx.textAlign = 'left';
+                    ctx.fillText(activity.name, margin, isTop ? activityY - 10 * dpr : activityY + activityHeight + 20 * dpr);
+                    
+                    activity.ranges.forEach(range => {
+                        const start = parseFloat(range.start.replace('+', ''));
+                        const end = parseFloat(range.end.replace('+', ''));
+                        const x1 = margin + (start - minDistance) * pixelsPerUnit;
+                        const x2 = margin + (end - minDistance) * pixelsPerUnit;
+                        const width = x2 - x1;
+                        
+                        const activityColor = activity.color || colorPicker.value;
+                        
+                        drawActivityBar(x1, activityY, width, activityHeight, activityColor, range.progress, dpr, isTop);
+                        
+                        ctx.fillStyle = 'white';
+                        ctx.font = `${10 * dpr}px 'Inter', sans-serif`;
+                        ctx.textAlign = 'center';
+                        const textY = isTop ? activityY - activityHeight / 2 + 5 * dpr : activityY + activityHeight / 2 + 5 * dpr;
+                        ctx.fillText(range.date, x1 + width / 2, textY);
+                    });
+                });
+            }
+            
+            function drawActivityBar(x, y, width, height, color, progress, dpr, isTop) {
+                const borderRadius = 6 * dpr;
+                const progressWidth = (width * progress) / 100;
+                
+                ctx.fillStyle = `${color}33`;
+                ctx.beginPath();
+                roundRect(ctx, x, y, width, height, borderRadius);
+                ctx.fill();
+                
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                if (isTop) {
+                    roundRect(ctx, x, y, progressWidth, height, [borderRadius, borderRadius, 0, 0]);
+                } else {
+                    roundRect(ctx, x, y, progressWidth, height, [0, 0, borderRadius, borderRadius]);
+                }
+                ctx.fill();
+                
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2 * dpr;
+                ctx.beginPath();
+                roundRect(ctx, x, y, width, height, borderRadius);
+                ctx.stroke();
+            }
+            
+            function roundRect(ctx, x, y, width, height, radius) {
+                if (typeof radius === 'number') {
+                    radius = { tl: radius, tr: radius, br: radius, bl: radius };
+                } else if (Array.isArray(radius)) {
+                    radius = { tl: radius[0], tr: radius[1], br: radius[2], bl: radius[3] };
+                } else {
+                    radius = { tl: 0, tr: 0, br: 0, bl: 0 };
+                }
+                
+                ctx.beginPath();
+                ctx.moveTo(x + radius.tl, y);
+                ctx.lineTo(x + width - radius.tr, y);
+                ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
+                ctx.lineTo(x + width, y + height - radius.br);
+                ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
+                ctx.lineTo(x + radius.bl, y + height);
+                ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
+                ctx.lineTo(x, y + radius.tl);
+                ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+                ctx.closePath();
+            }
+            
+            function drawHoverEffect(item, dpr) {
+                const { x, y, width, height, activity, range } = item;
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.beginPath();
+                roundRect(ctx, x, y, width, height, 6 * dpr);
+                ctx.fill();
+                
+                ctx.strokeStyle = '#212529';
+                ctx.lineWidth = 2 * dpr;
+                ctx.beginPath();
+                roundRect(ctx, x, y, width, height, 6 * dpr);
+                ctx.stroke();
+            }
+            
+            function handleZoom(newScale, centerX = canvas.width / 2) {
+                const oldScale = scale;
+                scale = Math.max(0.5, Math.min(3, newScale));
+                const ratio = 1 - scale / oldScale;
+                offsetX += (centerX - offsetX) * ratio;
+                drawChart();
+            }
+            
+            function resetView() {
+                scale = 1;
+                offsetX = 0;
+                drawChart();
+            }
+            
+            function exportChart() {
+                const link = document.createElement('a');
+                link.download = 'construction-progress.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }
+            
+            function handleMouseMove(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left - offsetX) / scale;
+                const y = e.clientY - rect.top;
+                
+                const dpr = window.devicePixelRatio || 1;
+                const margin = 40 * dpr;
+                const centerY = rect.height / 2 * dpr;
+                const activityHeight = 24 * dpr;
+                
+                const minDistance = parseFloat(data.distances[0].replace('+', ''));
+                const maxDistance = parseFloat(data.distances[data.distances.length - 1].replace('+', ''));
+                const totalDistance = maxDistance - minDistance;
+                const pixelsPerUnit = (rect.width - 2 * margin) / (totalDistance * scale);
+                
+                let foundItem = null;
+                
+                [...data.topActivities, ...data.bottomActivities].forEach(activity => {
+                    activity.ranges.forEach(range => {
+                        const start = parseFloat(range.start.replace('+', ''));
+                        const end = parseFloat(range.end.replace('+', ''));
+                        const x1 = margin + (start - minDistance) * pixelsPerUnit;
+                        const x2 = margin + (end - minDistance) * pixelsPerUnit;
+                        const width = x2 - x1;
+                        
+                        const isTop = data.topActivities.includes(activity);
+                        const activityY = isTop ? 
+                            centerY - 70 * dpr - data.topActivities.indexOf(activity) * (activityHeight + 15 * dpr) : 
+                            centerY + 70 * dpr + data.bottomActivities.indexOf(activity) * (activityHeight + 15 * dpr);
+                        
+                        if (x >= x1 && x <= x2 && y >= activityY && y <= activityY + activityHeight) {
+                            foundItem = {
+                                x: x1,
+                                y: activityY,
+                                width,
+                                height: activityHeight,
+                                activity,
+                                range
+                            };
+                            
+                            tooltip.style.display = 'block';
+                            tooltip.style.left = `${e.clientX + 10}px`;
+                            tooltip.style.top = `${e.clientY + 10}px`;
+                            tooltip.innerHTML = `
+                                <div><strong>${activity.name}</strong></div>
+                                <div>Section: ${range.start} to ${range.end}</div>
+                                <div>Date: ${range.date}</div>
+                                <div>Progress: ${range.progress}%</div>
+                            `;
+                        }
+                    });
+                });
+                
+                if (foundItem) {
+                    hoveredItem = foundItem;
+                    tooltip.style.opacity = '1';
+                } else {
+                    hoveredItem = null;
+                    tooltip.style.opacity = '0';
+                }
+                
+                drawChart();
+            }
+            
+            function handleTouchStart(e) {
+                e.preventDefault();
+                isDragging = true;
+                lastX = e.touches[0].clientX;
+            }
+            
+            function handleTouchMove(e) {
+                e.preventDefault();
+                if (isDragging) {
+                    const deltaX = e.touches[0].clientX - lastX;
+                    offsetX += deltaX;
+                    lastX = e.touches[0].clientX;
+                    drawChart();
+                }
+            }
+            
+            function handleTouchEnd() {
+                isDragging = false;
+            }
+            
+            function handleWheel(e) {
+                e.preventDefault();
+                const delta = -Math.sign(e.deltaY) * 0.1;
+                const mouseX = e.clientX - canvas.getBoundingClientRect().left;
+                handleZoom(scale * (1 + delta), mouseX);
+            }
+            
+            zoomInBtn.addEventListener('click', () => handleZoom(scale * 1.2, canvas.width / 2));
+            zoomOutBtn.addEventListener('click', () => handleZoom(scale / 1.2, canvas.width / 2));
+            resetViewBtn.addEventListener('click', resetView);
+            exportBtn.addEventListener('click', exportChart);
+            colorPicker.addEventListener('input', drawChart);
+            
+            canvas.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                lastX = e.clientX;
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    offsetX += e.clientX - lastX;
+                    lastX = e.clientX;
+                    drawChart();
+                }
+                handleMouseMove(e);
+            });
+            
+            canvas.addEventListener('mouseup', () => isDragging = false);
+            canvas.addEventListener('mouseleave', () => {
+                isDragging = false;
+                hoveredItem = null;
+                tooltip.style.opacity = '0';
+                drawChart();
+            });
+            
+            canvas.addEventListener('touchstart', handleTouchStart);
+            canvas.addEventListener('touchmove', handleTouchMove);
+            canvas.addEventListener('touchend', handleTouchEnd);
+            
+            canvas.addEventListener('wheel', handleWheel, { passive: false });
+            
+            window.addEventListener('resize', () => {
+                initCanvas();
+                drawChart();
+            });
+            
+            initCanvas();
+        });
+    </script>
+</body>
+</html>
